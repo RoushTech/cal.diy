@@ -1,14 +1,12 @@
-import type { TFunction } from "i18next";
-import type { DateArray, ParticipationRole, EventStatus, ParticipationStatus } from "ics";
-import { createEvent } from "ics";
-import { RRule } from "rrule";
-
-import { getRichDescription } from "@calcom/lib/CalEventParser";
-import { getVideoCallUrlFromCalEvent } from "@calcom/lib/CalEventParser";
+import { getLocation, getRichDescription } from "@calcom/lib/CalEventParser";
 import { ORGANIZER_EMAIL_EXEMPT_DOMAINS } from "@calcom/lib/constants";
 import { ErrorCode } from "@calcom/lib/errorCodes";
 import { ErrorWithCode } from "@calcom/lib/errors";
 import type { CalendarEvent, Person } from "@calcom/types/Calendar";
+import type { TFunction } from "i18next";
+import type { DateArray, EventStatus, ParticipationRole, ParticipationStatus } from "ics";
+import { createEvent } from "ics";
+import { RRule } from "rrule";
 
 export enum BookingAction {
   Create = "create",
@@ -29,6 +27,8 @@ export type ICSCalendarEvent = Pick<
   | "organizer"
   | "attendees"
   | "location"
+  | "videoCallData"
+  | "additionalInformation"
   | "recurringEvent"
   | "team"
   | "type"
@@ -58,7 +58,12 @@ const generateIcsString = ({
   partstat?: ParticipationStatus;
   t?: TFunction;
 }): string | undefined => {
-  const location = getVideoCallUrlFromCalEvent(event) || event.location;
+  const location = getLocation({
+    videoCallData: event.videoCallData,
+    additionalInformation: event.additionalInformation,
+    location: event.location,
+    uid: event.uid,
+  });
 
   // Taking care of recurrence rule
   let recurrenceRule: string | undefined;
@@ -106,7 +111,7 @@ const generateIcsString = ({
           }))
         : []),
     ],
-    location: location ?? undefined,
+    location: location || undefined,
     method: status === "CANCELLED" ? "CANCEL" : "REQUEST",
     status,
     ...(event.hideCalendarEventDetails ? { classification: "PRIVATE" } : {}),

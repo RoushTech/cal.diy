@@ -1,8 +1,5 @@
-import type { TFunction } from "i18next";
-import short from "short-uuid";
-
 import getLabelValueMapFromResponses from "@calcom/lib/bookings/getLabelValueMapFromResponses";
-import { Prisma } from "@calcom/prisma/client";
+import type { Prisma } from "@calcom/prisma/client";
 import type {
   AdditionalInformation,
   AppsStatus,
@@ -10,9 +7,9 @@ import type {
   Person,
   RecurringEvent,
   TeamMember,
-  VideoCallData,
 } from "@calcom/types/Calendar";
-
+import type { TFunction } from "i18next";
+import short from "short-uuid";
 import { WEBAPP_URL } from "./constants";
 import isSmsCalEmail from "./isSmsCalEmail";
 import {
@@ -460,7 +457,7 @@ type RichDescriptionCalEvent = {
   appsStatus?: AppsStatus[] | null;
   manageLink?: string | null;
   hideOrganizerEmail?: boolean;
-  videoCallData?: { type?: string; url?: string };
+  videoCallData?: { type?: string; url?: string; password?: string | null };
   additionalInformation?: AdditionalInformation;
   location?: string | null;
   uid?: string | null;
@@ -561,6 +558,7 @@ export const getRichDescription = (
   includeAppStatus = false
 ) => {
   const t = t_ ?? calEvent.organizer.language.translate;
+  const videoCallPassword = getVideoCallPassword(calEvent.videoCallData);
 
   // Join all parts with single newlines and remove extra whitespace
   const parts = [
@@ -591,6 +589,7 @@ export const getRichDescription = (
       location: calEvent.location,
       uid: calEvent.uid,
     })}`,
+    videoCallPassword ? `${t("meeting_passcode")}:\n${videoCallPassword}` : "",
     getDescription(t, calEvent.description),
     getAdditionalNotes(t, calEvent.additionalNotes),
     getUserFieldsResponses(calEvent, t),
@@ -616,7 +615,7 @@ export const getCancellationReason = (t: TFunction, cancellationReason?: string 
   return `${t("cancellation_reason")}:\n${sanitized}`;
 };
 
-export const isDailyVideoCall = (videoCallData?: VideoCallData): boolean => {
+export const isDailyVideoCall = (videoCallData?: { type?: string }): boolean => {
   return videoCallData?.type === "daily_video";
 };
 
@@ -634,7 +633,11 @@ export const getVideoCallUrlFromCalEvent = (calEvent: {
     if (calEvent.videoCallData.type === "daily_video") {
       return getPublicVideoCallUrl(calEvent.uid);
     }
-    return calEvent.videoCallData.url ?? "";
+    // A videoCallData without a url can be built from a BookingReference whose meetingUrl is
+    // null, so fall through to the remaining sources rather than treating it as authoritative.
+    if (calEvent.videoCallData.url) {
+      return calEvent.videoCallData.url;
+    }
   }
   if (calEvent.additionalInformation?.hangoutLink) {
     return calEvent.additionalInformation.hangoutLink;
@@ -645,6 +648,6 @@ export const getVideoCallUrlFromCalEvent = (calEvent: {
   return "";
 };
 
-export const getVideoCallPassword = (videoCallData?: VideoCallData): string => {
+export const getVideoCallPassword = (videoCallData?: { type?: string; password?: string | null }): string => {
   return isDailyVideoCall(videoCallData) ? "" : (videoCallData?.password ?? "");
 };

@@ -73,6 +73,7 @@ type ExpectedEmail = {
     iCalUID?: string;
     recurrence?: Recurrence;
     method: string;
+    location?: string;
   };
   /**
    * Checks that there is no
@@ -185,6 +186,21 @@ expect.extend({
         expected: expectedEmail.ics?.iCalUID,
         message: () => `Expected ICS UID ${isNot ? "is" : "isn't"} present in actual`,
       };
+    }
+
+    if (!expectedEmail.noIcs && expectedEmail.ics?.location !== undefined) {
+      const icsObjectKeys = icsObject ? Object.keys(icsObject) : [];
+      const icsKey = icsObjectKeys.find((key) => key !== "vcalendar");
+      if (!icsKey) throw new Error("icsKey not found");
+      const actualLocation = (icsObject?.[icsKey] as VEvent)?.location;
+      if (actualLocation !== expectedEmail.ics.location) {
+        return {
+          pass: false,
+          actual: actualLocation,
+          expected: expectedEmail.ics.location,
+          message: () => `ICS location ${isNot ? "is" : "is not"} matching`,
+        };
+      }
     }
 
     if (expectedEmail.noIcs && ics) {
@@ -463,6 +479,7 @@ export function expectSuccessfulBookingCreationEmails({
   booking,
   destinationEmail,
   calendarType,
+  icsLocation,
 }: {
   emails: Fixtures["emails"];
   organizer: { email: string; name: string; timeZone: string };
@@ -476,6 +493,7 @@ export function expectSuccessfulBookingCreationEmails({
   booking: { uid: string; urlOrigin?: string };
   destinationEmail?: string;
   calendarType?: string;
+  icsLocation?: string;
 }) {
   const bookingUrlOrigin = booking.urlOrigin || WEBAPP_URL;
   expect(emails).toHaveEmail(
@@ -518,6 +536,7 @@ export function expectSuccessfulBookingCreationEmails({
               iCalUID: `${iCalUID}`,
               recurrence,
               method: "REQUEST",
+              location: icsLocation,
             },
           }
         : {}),
@@ -545,6 +564,7 @@ export function expectSuccessfulBookingCreationEmails({
         iCalUID: `${iCalUID}`,
         recurrence,
         method: "REQUEST",
+        location: icsLocation,
       },
       links: recurrence
         ? [

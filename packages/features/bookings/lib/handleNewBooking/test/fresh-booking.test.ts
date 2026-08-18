@@ -1543,6 +1543,7 @@ describe("handleNewBooking", () => {
             organizer,
             emails,
             iCalUID,
+            icsLocation: "http://mock-zoomvideo.example.com",
           });
 
           expectBookingCreatedWebhookToHaveBeenFired({

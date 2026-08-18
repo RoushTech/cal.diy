@@ -1,6 +1,5 @@
 import { faker } from "@faker-js/faker";
 import { describe, expect, it, vi } from "vitest";
-
 import {
   getLocation,
   getPublicVideoCallUrl,
@@ -57,6 +56,50 @@ describe("getVideoCallUrl", () => {
     });
 
     expect(getVideoCallUrlFromCalEvent(calEvent)).toEqual(getPublicVideoCallUrl(calEvent.uid));
+  });
+
+  it("should fall back to hangoutLink when videoCallData has no url", () => {
+    const hangoutLink = "https://meet.google.com/abc-defg-hij";
+    const calEvent = buildCalendarEvent({
+      videoCallData: buildVideoCallData({ type: "google_meet_video", url: "" }),
+      additionalInformation: { hangoutLink },
+      location: "integrations:google:meet",
+    });
+
+    expect(getVideoCallUrlFromCalEvent(calEvent)).toEqual(hangoutLink);
+  });
+
+  it("should fall back to an http location when videoCallData has no url", () => {
+    const location = "https://example.com/my-static-room";
+    const calEvent = buildCalendarEvent({
+      videoCallData: buildVideoCallData({ type: "zoom_video", url: "" }),
+      additionalInformation: undefined,
+      location,
+    });
+
+    expect(getVideoCallUrlFromCalEvent(calEvent)).toEqual(location);
+  });
+
+  it("should return an empty string when no source resolves a url", () => {
+    const calEvent = buildCalendarEvent({
+      videoCallData: buildVideoCallData({ type: "zoom_video", url: "" }),
+      additionalInformation: undefined,
+      location: "integrations:zoom",
+    });
+
+    expect(getVideoCallUrlFromCalEvent(calEvent)).toEqual("");
+  });
+});
+
+describe("getLocation fallbacks", () => {
+  it("should return the provider name rather than the raw integrations location", () => {
+    const calEvent = buildCalendarEvent({
+      videoCallData: buildVideoCallData({ type: "zoom_video", url: "" }),
+      additionalInformation: undefined,
+      location: "integrations:zoom",
+    });
+
+    expect(getLocation(calEvent)).toEqual("Zoom");
   });
 });
 
