@@ -1,9 +1,7 @@
-import type { TFunction } from "i18next";
-
 import { guessEventLocationType } from "@calcom/app-store/locations";
-import { getVideoCallUrlFromCalEvent } from "@calcom/lib/CalEventParser";
+import { getVideoCallPassword, getVideoCallUrlFromCalEvent } from "@calcom/lib/CalEventParser";
 import type { CalendarEvent } from "@calcom/types/Calendar";
-
+import type { TFunction } from "i18next";
 import { Info } from "./Info";
 
 export function LocationInfo(props: { calEvent: CalendarEvent; t: TFunction }) {
@@ -20,6 +18,7 @@ export function LocationInfo(props: { calEvent: CalendarEvent; t: TFunction }) {
   }
 
   const isPhone = location?.startsWith("+");
+  const meetingPassword = getVideoCallPassword(props.calEvent.videoCallData);
 
   // Because of location being a value here, we can determine the app that generated the location only for Dynamic Link based apps where the value is integrations:*
   // For static link based location apps, the value is that URL itself. So, it is not straightforward to determine the app that generated the location.
@@ -49,6 +48,11 @@ export function LocationInfo(props: { calEvent: CalendarEvent; t: TFunction }) {
                   {meetingUrl}
                 </a>
               </>
+              {meetingPassword && (
+                <div>
+                  {t("meeting_passcode")}: {meetingPassword}
+                </div>
+              )}
             </div>
           )
         }
@@ -76,7 +80,9 @@ export function LocationInfo(props: { calEvent: CalendarEvent; t: TFunction }) {
       withSpacer
       description={providerName || location}
       extraInfo={
-        (providerName === "Zoom" || providerName === "Google") && props.calEvent.requiresConfirmation ? (
+        // Dynamic-link conferencing apps only: their meeting is not created until confirmation,
+        // so there is no URL to show yet. Static-link apps already resolved above.
+        props.calEvent.requiresConfirmation && location?.startsWith("integrations:") ? (
           <p style={{ color: "#494949", fontWeight: 400, lineHeight: "24px" }}>
             <>{t("meeting_url_provided_after_confirmed")}</>
           </p>

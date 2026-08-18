@@ -235,6 +235,7 @@
   "meeting_id": "Meeting ID",
   "meeting_password": "Meeting password",
   "meeting_url": "Meeting URL",
+  "meeting_passcode": "Meeting passcode",
   "meeting_url_not_found": "Meeting URL not found",
   "token_not_found": "Token not found",
   "some_other_host_already_accepted_the_meeting": "Some other host already accepted the meeting. Do you still want to join? <0>Continue to meeting</0>",

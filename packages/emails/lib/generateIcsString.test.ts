@@ -1,13 +1,10 @@
-import { describe, expect, vi } from "vitest";
-
 import { ORGANIZER_EMAIL_EXEMPT_DOMAINS } from "@calcom/lib/constants";
 import { ErrorCode } from "@calcom/lib/errorCodes";
 import { ErrorWithCode } from "@calcom/lib/errors";
-import { buildCalendarEvent, buildPerson } from "@calcom/lib/test/builder";
-import { buildVideoCallData } from "@calcom/lib/test/builder";
-import type { CalendarEvent } from "@calcom/types/Calendar";
+import { buildCalendarEvent, buildPerson, buildVideoCallData } from "@calcom/lib/test/builder";
 import { test } from "@calcom/testing/lib/fixtures/fixtures";
-
+import type { CalendarEvent } from "@calcom/types/Calendar";
+import { describe, expect, vi } from "vitest";
 import generateIcsString from "./generateIcsString";
 
 const assertHasIcsString = (icsString: string | undefined) => {
@@ -169,6 +166,45 @@ describe("generateIcsString", () => {
       assertHasIcsString(icsString);
 
       expect(icsString).toEqual(expect.stringContaining(`LOCATION:${event.location}`));
+    });
+
+    test("Location is a dynamic-link integration with no video call data", () => {
+      const event = buildCalendarEvent(
+        {
+          iCalSequence: 0,
+          attendees: [buildPerson()],
+          location: "integrations:zoom",
+          videoCallData: undefined,
+        },
+        true
+      );
+
+      const icsString = generateIcsString({ event, status: "CONFIRMED" });
+
+      assertHasIcsString(icsString);
+
+      expect(icsString).toEqual(expect.stringContaining("LOCATION:Zoom"));
+      expect(icsString).not.toEqual(expect.stringContaining("integrations:zoom"));
+    });
+
+    test("Falls back to hangoutLink when video call data has no url", () => {
+      const hangoutLink = "https://meet.google.com/abc-defg-hij";
+      const event = buildCalendarEvent(
+        {
+          iCalSequence: 0,
+          attendees: [buildPerson()],
+          location: "integrations:google:meet",
+          videoCallData: { type: "google_meet_video", id: "", password: "", url: "" },
+          additionalInformation: { hangoutLink },
+        },
+        true
+      );
+
+      const icsString = generateIcsString({ event, status: "CONFIRMED" });
+
+      assertHasIcsString(icsString);
+
+      expect(icsString).toEqual(expect.stringContaining(`LOCATION:${hangoutLink}`));
     });
   });
   describe("error handling", () => {
